@@ -4,7 +4,7 @@ import { defaultWorkerConfig, workerConfigFromEnv } from '../src/config.js';
 import { InjectedFault, SimulatedCrash, fault, parseFaults, shouldFault } from '../src/faults.js';
 import { backoffMs, backoffRange } from '../src/queue/backoff.js';
 import type { Db } from '../src/db/pool.js';
-import { Wakeup, Worker } from '../src/worker/worker.js';
+import { Wakeup, Worker, jitteredPollMs } from '../src/worker/worker.js';
 
 describe('backoff', () => {
   const opts = { baseMs: 1_000, capMs: 60_000 };
@@ -115,7 +115,20 @@ describe('Worker', () => {
       console.error = err;
     }
     expect(calls).toBeGreaterThanOrEqual(2);
-    expect(calls).toBeLessThanOrEqual(5);
+    expect(calls).toBeLessThanOrEqual(9); // 350 ms / (100 ms -50% jitter) + 1; a spin would be thousands
+  });
+});
+
+describe('poll jitter', () => {
+  it('spreads the interval over [0.5x, 1.5x] with the same mean', () => {
+    expect(jitteredPollMs(1_000, () => 0)).toBe(500);
+    expect(jitteredPollMs(1_000, () => 0.999999)).toBe(1_500);
+    const xs = Array.from({ length: 20_000 }, () => jitteredPollMs(1_000));
+    const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(500);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(1_500);
+    expect(mean).toBeGreaterThan(980);
+    expect(mean).toBeLessThan(1_020);
   });
 });
 

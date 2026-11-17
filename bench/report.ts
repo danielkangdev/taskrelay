@@ -111,15 +111,15 @@ if (e2) {
 }
 
 const e3 = await latest('e3_wakeup');
+const e3old = await latest('e3_wakeup_nojitter'); // same experiment before poll jitter was added
 if (e3) {
   out.push('### E3 — wake-up latency at low load (enqueue → start, poll interval 1 s)\n');
-  out.push(
-    table(
-      ['workers', 'mode', 'jobs', 'p50 ms', 'p95 ms', 'p99 ms', 'max ms'],
-      e3.runs.map((r: any) => [r.workers, r.mode === 'notify' ? 'LISTEN/NOTIFY + poll' : 'poll only', r.jobs, r.latency_ms.p50, r.latency_ms.p95, r.latency_ms.p99, r.latency_ms.max]),
-    ) + '\n',
-  );
-  out.push(envLine(e3) + '\n');
+  const row = (r: any, mode: string) => [r.workers, mode, r.jobs, r.latency_ms.p50, r.latency_ms.p95, r.latency_ms.p99, r.latency_ms.max];
+  const rows = e3.runs.map((r: any) => row(r, r.mode === 'notify' ? 'LISTEN/NOTIFY + jittered poll' : 'poll only, ±50% jitter'));
+  for (const r of e3old?.runs.filter((x: any) => x.mode === 'poll') ?? []) rows.push(row(r, '_poll only, fixed interval (before jitter)_'));
+  rows.sort((a: any, b: any) => a[0] - b[0]);
+  out.push(table(['workers', 'mode', 'jobs', 'p50 ms', 'p95 ms', 'p99 ms', 'max ms'], rows) + '\n');
+  out.push(envLine(e3) + (e3old ? ` _Fixed-interval rows: \`bench/results/${e3old.file}\`._` : '') + '\n');
 }
 
 const e4 = await latest('e4_chaos');

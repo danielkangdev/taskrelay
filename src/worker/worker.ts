@@ -44,6 +44,16 @@ export class Wakeup {
   }
 }
 
+/**
+ * Poll interval with +/-50% uniform jitter (mean unchanged). Without it, loops
+ * that start together stay in phase forever: they all find the queue empty at
+ * the same moment and all sleep exactly one interval, so N pollers behave like
+ * one (measured in E3).
+ */
+export function jitteredPollMs(ms: number, rand: () => number = Math.random): number {
+  return Math.round(ms * (0.5 + rand()));
+}
+
 interface Held {
   job: ClaimedJob;
   abort: AbortController;
@@ -119,12 +129,12 @@ export class Worker {
         } catch (err) {
           console.error(`[${this.id}] claim failed:`, (err as Error).message);
           // Back off on database errors; a wake-up (e.g. shutdown) still ends the wait early.
-          await this.wakeup.wait(this.cfg.pollIntervalMs, this.wakeup.gen);
+          await this.wakeup.wait(jitteredPollMs(this.cfg.pollIntervalMs), this.wakeup.gen);
           continue;
         }
         this.hooks.onClaim?.(performance.now() - t0, jobs.length);
         if (jobs.length === 0) {
-          await this.wakeup.wait(this.cfg.pollIntervalMs, gen);
+          await this.wakeup.wait(jitteredPollMs(this.cfg.pollIntervalMs), gen);
           continue;
         }
         for (const job of jobs) this.held.set(job.id, { job, abort: new AbortController(), hung: false, finishing: false });

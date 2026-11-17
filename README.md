@@ -1,6 +1,6 @@
 # TaskRelay
 
-[![CI](https://github.com/OWNER/taskrelay/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/taskrelay/actions/workflows/ci.yml)
+[![CI](https://github.com/K949406124/taskrelay/actions/workflows/ci.yml/badge.svg)](https://github.com/K949406124/taskrelay/actions/workflows/ci.yml)
 
 A PostgreSQL-backed background job system (TypeScript, Node.js 22, PostgreSQL 16) built to show that its correctness claims hold, with tests and measurements for each one. Concurrent workers never run the same job at the same time. Crashed workers' jobs come back. A worker that lost its lease can't overwrite the new owner. Re-executions don't duplicate writes.
 
@@ -91,12 +91,14 @@ _Source: `bench/results/e2_claim_strategies_2026-11-17.json`. PostgreSQL 16.16 (
 
 | workers | mode | jobs | p50 ms | p95 ms | p99 ms | max ms |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | poll only | 278 | 463.7 | 957.4 | 994.7 | 997.4 |
-| 1 | LISTEN/NOTIFY + poll | 308 | 4.2 | 7.2 | 8.9 | 23.6 |
-| 4 | poll only | 322 | 446.7 | 932.9 | 973.2 | 1000 |
-| 4 | LISTEN/NOTIFY + poll | 297 | 4 | 13.6 | 14.6 | 15.4 |
+| 1 | poll only, ±50% jitter | 326 | 593.2 | 1244.2 | 1375.2 | 1470.6 |
+| 1 | LISTEN/NOTIFY + jittered poll | 313 | 3.4 | 13.2 | 14.8 | 17.5 |
+| 1 | _poll only, fixed interval (before jitter)_ | 278 | 463.7 | 957.4 | 994.7 | 997.4 |
+| 4 | poll only, ±50% jitter | 258 | 148 | 608.7 | 749.2 | 778.8 |
+| 4 | LISTEN/NOTIFY + jittered poll | 284 | 3.3 | 13.5 | 14.8 | 15.4 |
+| 4 | _poll only, fixed interval (before jitter)_ | 322 | 446.7 | 932.9 | 973.2 | 1000 |
 
-_Source: `bench/results/e3_wakeup_2026-11-17.json`. PostgreSQL 16.16 (Debian 16.16-1.pgdg13+1) in Docker (no CPU limit, synchronous_commit=on), 12 vCPU / 7.6 GB visible to containers, 13th Gen Intel(R) Core(TM) i7-1365U; Windows 11 host, Docker Desktop (WSL2 VM); client and PostgreSQL share the VM._
+_Source: `bench/results/e3_wakeup_2026-11-17.json`. PostgreSQL 16.16 (Debian 16.16-1.pgdg13+1) in Docker (no CPU limit, synchronous_commit=on), 12 vCPU / 7.6 GB visible to containers, 13th Gen Intel(R) Core(TM) i7-1365U; Windows 11 host, Docker Desktop (WSL2 VM); client and PostgreSQL share the VM._ _Fixed-interval rows: `bench/results/e3_wakeup_nojitter_2026-11-17.json`._
 
 ### E4 — chaos: SIGKILL random workers (10,000 report jobs, 8 worker containers)
 
@@ -132,7 +134,12 @@ _Source: `bench/results/e4_chaos_2026-11-17.json`. 10000 report jobs (simulate_m
 - `for_update` never duplicated, but on average 3.6 of 8 backends were blocked on a row lock. Claim p95 was 17 ms vs 3 ms, and throughput 40% lower (632 vs 1,061 jobs/s).
 - **Unexpected:** with `synchronous_commit=off`, `for_update` and `skip_locked` are indistinguishable. Paired runs differed by −7%, +4% and +7%, within run-to-run noise, and lock waiters dropped to 0.4. The reason is that under `FOR UPDATE` a waiter is blocked for as long as the lock holder's transaction lasts. With durable commits that includes a WAL flush, and with async commit it lasts microseconds. So the advantage of `SKIP LOCKED` scales with the length of the claim transaction. It matters most exactly when commits are slow, or when the claim is part of a longer transaction.
 
-**E3: NOTIFY cuts pickup latency by about 110×.** p50 drops from 464 ms to 4.2 ms. Polling gives p50 ≈ half the interval and p95 ≈ the interval. Four polling workers were no better than one, because the loops stay in phase: they start together and each sleeps a full interval after an empty claim. Jittering the poll interval would spread them out. With NOTIFY, polling only covers missed notifications and delayed `run_at`.
+**E3: NOTIFY cuts pickup latency by more than 100×. Poll jitter matters once there are several pollers.**
+- LISTEN/NOTIFY: p50 3–4 ms vs 450–600 ms for polling.
+- With a fixed 1 s interval, 4 pollers were no better than 1 (p50 447 vs 464 ms). The loops start together and each sleeps exactly one interval after an empty claim, so they stay in phase forever and poll at the same instant.
+- With ±50% jitter (now the default), the 4 loops drift apart and act like a 4× faster poller: p50 148 ms, p95 609 ms, about 3× better.
+- The cost falls on a lone poller: p50 rises from 464 to 593 ms and the worst case goes from 1.0 s to 1.5 s, because a random arrival is more likely to land in a long gap.
+- With NOTIFY on, the default, polling only covers missed notifications and delayed `run_at`, and the jitter is invisible: 3.3–3.4 ms p50.
 
 **E4: at-least-once happened, and idempotency held.**
 - 43 SIGKILLs left 0 jobs stuck. Every job succeeded, and 40 jobs ran twice.
@@ -208,7 +215,7 @@ Fault injection ([faults.ts](src/faults.ts)) is inert unless `TASKRELAY_FAULTS` 
 
 **At-least-once plus idempotency.** The queue guarantees that every job runs to completion at least once, as long as some worker survives. It does not guarantee exactly once. A crash after the side effect but before the acknowledgement means the job runs again. E4 measures how often that happens under SIGKILL chaos. "Exactly-once effects" come from making each effect idempotent with a business key (`report_key`), not from the queue. That is cheaper and more honest than distributed transactions.
 
-**Smaller choices.** `attempts` counts claims, incremented at claim time, so a job that crashes its worker every time still reaches `dead` instead of looping forever. Expired leases are requeued without backoff, because a crash says nothing about the job. Handler failures back off with jitter so jobs that failed together don't retry together. `pg_notify` runs inside the enqueue statement, so listeners are only woken after commit. The wake-up generation counter in [worker.ts](src/worker/worker.ts) closes the race where a notification arrives between "queue was empty" and "start waiting".
+**Smaller choices.** The poll interval is jittered ±50% so worker loops that start together don't poll in lockstep (E3). `attempts` counts claims, incremented at claim time, so a job that crashes its worker every time still reaches `dead` instead of looping forever. Expired leases are requeued without backoff, because a crash says nothing about the job. Handler failures back off with jitter so jobs that failed together don't retry together. `pg_notify` runs inside the enqueue statement, so listeners are only woken after commit. The wake-up generation counter in [worker.ts](src/worker/worker.ts) closes the race where a notification arrives between "queue was empty" and "start waiting".
 
 ## Reproducing the experiments
 

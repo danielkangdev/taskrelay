@@ -77,6 +77,7 @@ describe('test 9: LISTEN/NOTIFY wakes idle workers', () => {
       const j = await t.job(job.id);
       return j.started_at ? j : undefined;
     });
-    expect(+done.started_at! - +done.created_at).toBeGreaterThan(1_000);
+    // Next poll comes 1-3 s (2 s +/-50% jitter) after the initial empty claim; we enqueued ~0.2 s in.
+    expect(+done.started_at! - +done.created_at).toBeGreaterThan(600);
   });
 });

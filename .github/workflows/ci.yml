@@ -32,5 +32,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      # verbose: every test name is in the log, so a skipped test is visible
+      - run: npm test -- --reporter=verbose
       - run: npm run build
