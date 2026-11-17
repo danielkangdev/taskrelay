@@ -1,0 +1,272 @@
+{
+  "experiment": "E4 chaos (SIGKILL workers)",
+  "method": "10000 report jobs (simulate_ms=100), 8 worker containers x 1 loop, lease 5000 ms, reaper every 1 s. Every 2-4 s a random running worker container is killed with `docker kill --signal KILL` and restarted 1 s later.",
+  "environment": {
+    "timestamp": "2026-11-17T19:25:29.231Z",
+    "client": {
+      "note": "orchestrator on Windows host; workers in containers"
+    },
+    "postgres": {
+      "version": "16.16 (Debian 16.16-1.pgdg13+1)",
+      "in_docker": true,
+      "container_cpu_limit": "max 100000",
+      "settings": {
+        "fsync": "on",
+        "max_connections": "200",
+        "max_wal_size": "1024 MB",
+        "shared_buffers": "16384 8kB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "work_mem": "4096 kB"
+      }
+    },
+    "bench_synchronous_commit": "on",
+    "host_note": "Windows 11 host, Docker Desktop (WSL2 VM); client and PostgreSQL share the VM."
+  },
+  "wall_seconds": 154.4,
+  "kills": 43,
+  "kills_holding_a_job": 39,
+  "jobs": {
+    "total": 10000,
+    "succeeded": 10000,
+    "stuck_running": 0
+  },
+  "executions": {
+    "total": 10040,
+    "distinct_jobs": 10000,
+    "duplicates": 40,
+    "jobs_run_more_than_once": 40
+  },
+  "reports": {
+    "rows": 10000,
+    "distinct_keys": 10000,
+    "dup_keys": 0,
+    "succeeded_jobs": 10000
+  },
+  "consistency": {
+    "succeeded_without_report": 0,
+    "reports_of_dead_jobs": 0,
+    "absorbed_writes": 1
+  },
+  "attempts_histogram": {
+    "1": 9960,
+    "2": 40
+  },
+  "kill_log": [
+    {
+      "at_s": 5.9,
+      "container": "7f3999ff454d",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 10.6,
+      "container": "7f3999ff454d",
+      "jobs_in_flight": 2
+    },
+    {
+      "at_s": 14,
+      "container": "6c161d2a9735",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 18.5,
+      "container": "6c161d2a9735",
+      "jobs_in_flight": 2
+    },
+    {
+      "at_s": 21.4,
+      "container": "4e4d3d786ba2",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 24.6,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 28.8,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 2
+    },
+    {
+      "at_s": 33,
+      "container": "7f3999ff454d",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 36.3,
+      "container": "4e4d3d786ba2",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 39.3,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 42.1,
+      "container": "2ee04d3c1a48",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 45.6,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 48.8,
+      "container": "7f3999ff454d",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 51.5,
+      "container": "7f8db514e6f1",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 54.9,
+      "container": "7f3999ff454d",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 58.1,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 61.2,
+      "container": "5e0d2db32b00",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 64.8,
+      "container": "7f8db514e6f1",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 68.3,
+      "container": "6c161d2a9735",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 71,
+      "container": "2ee04d3c1a48",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 75.2,
+      "container": "4e4d3d786ba2",
+      "jobs_in_flight": 0
+    },
+    {
+      "at_s": 79.2,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 83.7,
+      "container": "5e0d2db32b00",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 86.9,
+      "container": "7f3999ff454d",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 89.7,
+      "container": "6c161d2a9735",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 93.5,
+      "container": "fe5724608dac",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 97.2,
+      "container": "2ee04d3c1a48",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 101.2,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 104,
+      "container": "7f8db514e6f1",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 107.6,
+      "container": "7f3999ff454d",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 110.7,
+      "container": "2ee04d3c1a48",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 113.6,
+      "container": "7f8db514e6f1",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 117.2,
+      "container": "2ee04d3c1a48",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 120.1,
+      "container": "4e4d3d786ba2",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 124.4,
+      "container": "6c161d2a9735",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 128.1,
+      "container": "5e0d2db32b00",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 131.3,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 134.6,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 139.1,
+      "container": "6c161d2a9735",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 143.4,
+      "container": "f85d666c5457",
+      "jobs_in_flight": 0
+    },
+    {
+      "at_s": 146.2,
+      "container": "6c161d2a9735",
+      "jobs_in_flight": 1
+    },
+    {
+      "at_s": 150.2,
+      "container": "7f8db514e6f1",
+      "jobs_in_flight": 0
+    },
+    {
+      "at_s": 154.4,
+      "container": "4e4d3d786ba2",
+      "jobs_in_flight": 0
+    }
+  ]
+}

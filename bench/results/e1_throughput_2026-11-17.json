@@ -1,0 +1,889 @@
+{
+  "experiment": "E1 throughput vs workers",
+  "method": "Workers are concurrent loops in one Node.js process (one PG connection each). 100000 pre-inserted bench jobs (mode=write), skip_locked claiming, run log on. DB CPU is the PostgreSQL container cgroup usage_usec delta / wall time (1.0 = one core busy).",
+  "environment": {
+    "timestamp": "2026-11-17T19:03:10.782Z",
+    "client": {
+      "in_docker": true,
+      "node": "v22.23.5",
+      "platform": "linux 6.18.58.1-microsoft-standard-WSL2",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-1365U",
+      "cpu_cores": 12,
+      "mem_gb": 7.6
+    },
+    "postgres": {
+      "version": "16.16 (Debian 16.16-1.pgdg13+1)",
+      "in_docker": true,
+      "container_cpu_limit": "max 100000",
+      "settings": {
+        "fsync": "on",
+        "max_connections": "200",
+        "max_wal_size": "1024 MB",
+        "shared_buffers": "16384 8kB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "work_mem": "4096 kB"
+      }
+    },
+    "bench_synchronous_commit": "on",
+    "host_note": "Windows 11 host, Docker Desktop (WSL2 VM); client and PostgreSQL share the VM."
+  },
+  "runs": [
+    {
+      "workers": 1,
+      "batch": 1,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 353.15,
+      "throughput": 283,
+      "exec_ms": {
+        "p50": 2.04,
+        "p95": 4.1,
+        "p99": 5.73
+      },
+      "claim_ms": {
+        "p50": 1.02,
+        "p95": 1.99
+      },
+      "db_cpu_cores": 0.34,
+      "client_cpu_cores": 0.15,
+      "backends_by_state": {
+        "idle": 1.52,
+        "IO:WALSync": 0.86,
+        "CPU": 0.09,
+        "IO:WALWrite": 0,
+        "IO:WALInitWrite": 0,
+        "Client:ClientRead": 0,
+        "LWLock:WALWrite": 0
+      },
+      "wal": {
+        "records": 3005991,
+        "bytes": 300810748,
+        "writes": 403938,
+        "syncs": 398747,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 100001,
+          "total_ms": 15498,
+          "mean_ms": 0.155,
+          "io_ms": 10
+        },
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 6445,
+          "mean_ms": 0.064,
+          "io_ms": 19
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 2880,
+          "mean_ms": 0.029,
+          "io_ms": 40
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 2032,
+          "mean_ms": 0.02,
+          "io_ms": 39
+        },
+        {
+          "query": "WITH expired AS ( SELECT id FROM jobs WHERE status = $2 AND lease_expires_at",
+          "calls": 70,
+          "total_ms": 14,
+          "mean_ms": 0.193,
+          "io_ms": 0
+        },
+        {
+          "query": "SELECT status, count(*)::int AS n FROM jobs GROUP BY status",
+          "calls": 1,
+          "total_ms": 10,
+          "mean_ms": 10.04,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    },
+    {
+      "workers": 2,
+      "batch": 1,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 234.26,
+      "throughput": 427,
+      "exec_ms": {
+        "p50": 3.22,
+        "p95": 4.55,
+        "p99": 6.05
+      },
+      "claim_ms": {
+        "p50": 1.2,
+        "p95": 1.97
+      },
+      "db_cpu_cores": 0.58,
+      "client_cpu_cores": 0.21,
+      "backends_by_state": {
+        "idle": 2.57,
+        "IO:WALSync": 0.9,
+        "LWLock:WALWrite": 0.41,
+        "CPU": 0.32,
+        "IO:WALWrite": 0.01,
+        "Client:ClientRead": 0
+      },
+      "wal": {
+        "records": 3000833,
+        "bytes": 284069389,
+        "writes": 405689,
+        "syncs": 399801,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 100002,
+          "total_ms": 18406,
+          "mean_ms": 0.184,
+          "io_ms": 13
+        },
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 7272,
+          "mean_ms": 0.073,
+          "io_ms": 28
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 3156,
+          "mean_ms": 0.032,
+          "io_ms": 56
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 2095,
+          "mean_ms": 0.021,
+          "io_ms": 46
+        },
+        {
+          "query": "WITH expired AS ( SELECT id FROM jobs WHERE status = $2 AND lease_expires_at",
+          "calls": 46,
+          "total_ms": 17,
+          "mean_ms": 0.36,
+          "io_ms": 0
+        },
+        {
+          "query": "SELECT status, count(*)::int AS n FROM jobs GROUP BY status",
+          "calls": 1,
+          "total_ms": 15,
+          "mean_ms": 14.561,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    },
+    {
+      "workers": 4,
+      "batch": 1,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 138.8,
+      "throughput": 720,
+      "exec_ms": {
+        "p50": 3.51,
+        "p95": 5.44,
+        "p99": 7.21
+      },
+      "claim_ms": {
+        "p50": 1.7,
+        "p95": 2.65
+      },
+      "db_cpu_cores": 1.06,
+      "client_cpu_cores": 0.3,
+      "backends_by_state": {
+        "idle": 3.42,
+        "LWLock:WALWrite": 1.62,
+        "IO:WALSync": 0.91,
+        "CPU": 0.76,
+        "IO:WALWrite": 0.02,
+        "Client:ClientRead": 0.01,
+        "IO:DataFileExtend": 0,
+        "LWLock:BufferContent": 0,
+        "unknown": 0
+      },
+      "wal": {
+        "records": 2482919,
+        "bytes": 228754590,
+        "writes": 216390,
+        "syncs": 216347,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 100004,
+          "total_ms": 24682,
+          "mean_ms": 0.247,
+          "io_ms": 27
+        },
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 7979,
+          "mean_ms": 0.08,
+          "io_ms": 39
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 3547,
+          "mean_ms": 0.035,
+          "io_ms": 68
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 2301,
+          "mean_ms": 0.023,
+          "io_ms": 56
+        },
+        {
+          "query": "WITH expired AS ( SELECT id FROM jobs WHERE status = $2 AND lease_expires_at",
+          "calls": 27,
+          "total_ms": 26,
+          "mean_ms": 0.967,
+          "io_ms": 0
+        },
+        {
+          "query": "SELECT status, count(*)::int AS n FROM jobs GROUP BY status",
+          "calls": 1,
+          "total_ms": 15,
+          "mean_ms": 14.959,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    },
+    {
+      "workers": 8,
+      "batch": 1,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 103.63,
+      "throughput": 965,
+      "exec_ms": {
+        "p50": 5.31,
+        "p95": 7.67,
+        "p99": 9.53
+      },
+      "claim_ms": {
+        "p50": 2.62,
+        "p95": 3.63
+      },
+      "db_cpu_cores": 1.95,
+      "client_cpu_cores": 0.46,
+      "backends_by_state": {
+        "idle": 6.04,
+        "LWLock:WALWrite": 4.12,
+        "CPU": 1.31,
+        "IO:WALSync": 0.94,
+        "Client:ClientRead": 0.03,
+        "IO:WALWrite": 0.01,
+        "LWLock:BufferContent": 0.01,
+        "IO:DataFileExtend": 0,
+        "LWLock:XactSLRU": 0,
+        "Timeout:SpinDelay": 0
+      },
+      "wal": {
+        "records": 2496061,
+        "bytes": 230032552,
+        "writes": 117204,
+        "syncs": 117162,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 100008,
+          "total_ms": 35783,
+          "mean_ms": 0.358,
+          "io_ms": 97
+        },
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 10400,
+          "mean_ms": 0.104,
+          "io_ms": 118
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 5019,
+          "mean_ms": 0.05,
+          "io_ms": 177
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 3058,
+          "mean_ms": 0.031,
+          "io_ms": 132
+        },
+        {
+          "query": "WITH expired AS ( SELECT id FROM jobs WHERE status = $2 AND lease_expires_at",
+          "calls": 20,
+          "total_ms": 45,
+          "mean_ms": 2.257,
+          "io_ms": 0
+        },
+        {
+          "query": "SELECT status, count(*)::int AS n FROM jobs GROUP BY status",
+          "calls": 1,
+          "total_ms": 19,
+          "mean_ms": 18.964,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    },
+    {
+      "workers": 16,
+      "batch": 1,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 73.32,
+      "throughput": 1364,
+      "exec_ms": {
+        "p50": 7.94,
+        "p95": 10.11,
+        "p99": 12.48
+      },
+      "claim_ms": {
+        "p50": 3.5,
+        "p95": 4.59
+      },
+      "db_cpu_cores": 3.33,
+      "client_cpu_cores": 0.69,
+      "backends_by_state": {
+        "idle": 10.63,
+        "LWLock:WALWrite": 9.36,
+        "CPU": 2.25,
+        "IO:WALSync": 0.92,
+        "Client:ClientRead": 0.12,
+        "LWLock:BufferContent": 0.02,
+        "IO:WALWrite": 0.02,
+        "Timeout:SpinDelay": 0.01,
+        "LWLock:WALInsert": 0.01,
+        "LWLock:LockManager": 0,
+        "IO:DataFileExtend": 0,
+        "LWLock:XidGen": 0
+      },
+      "wal": {
+        "records": 2511924,
+        "bytes": 229250054,
+        "writes": 66977,
+        "syncs": 66934,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 100016,
+          "total_ms": 44844,
+          "mean_ms": 0.448,
+          "io_ms": 42
+        },
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 14247,
+          "mean_ms": 0.142,
+          "io_ms": 71
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 5701,
+          "mean_ms": 0.057,
+          "io_ms": 122
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 3600,
+          "mean_ms": 0.036,
+          "io_ms": 99
+        },
+        {
+          "query": "UPDATE jobs j SET lease_expires_at = now() + make_interval(secs => $3::float8 / $4) F",
+          "calls": 57,
+          "total_ms": 31,
+          "mean_ms": 0.539,
+          "io_ms": 0
+        },
+        {
+          "query": "SELECT count(*) AS runs, count(DISTINCT job_id) AS d FROM job_runs",
+          "calls": 1,
+          "total_ms": 20,
+          "mean_ms": 20.48,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    },
+    {
+      "workers": 1,
+      "batch": 10,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 211.97,
+      "throughput": 472,
+      "exec_ms": {
+        "p50": 1.82,
+        "p95": 2.79,
+        "p99": 4.13
+      },
+      "claim_ms": {
+        "p50": 1.29,
+        "p95": 1.83
+      },
+      "db_cpu_cores": 0.29,
+      "client_cpu_cores": 0.14,
+      "backends_by_state": {
+        "idle": 2.8,
+        "IO:WALSync": 0.82,
+        "CPU": 0.11,
+        "IO:WALWrite": 0,
+        "Client:ClientRead": 0,
+        "IO:DataFileExtend": 0
+      },
+      "wal": {
+        "records": 2403511,
+        "bytes": 228109173,
+        "writes": 309122,
+        "syncs": 309078,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 5337,
+          "mean_ms": 0.053,
+          "io_ms": 25
+        },
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 10001,
+          "total_ms": 3645,
+          "mean_ms": 0.364,
+          "io_ms": 17
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 2266,
+          "mean_ms": 0.023,
+          "io_ms": 42
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 1505,
+          "mean_ms": 0.015,
+          "io_ms": 43
+        },
+        {
+          "query": "UPDATE jobs j SET lease_expires_at = now() + make_interval(secs => $3::float8 / $4) F",
+          "calls": 19,
+          "total_ms": 35,
+          "mean_ms": 1.865,
+          "io_ms": 0
+        },
+        {
+          "query": "SELECT status, count(*)::int AS n FROM jobs GROUP BY status",
+          "calls": 1,
+          "total_ms": 11,
+          "mean_ms": 10.693,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    },
+    {
+      "workers": 2,
+      "batch": 10,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 175.48,
+      "throughput": 570,
+      "exec_ms": {
+        "p50": 3.14,
+        "p95": 4.48,
+        "p99": 6.16
+      },
+      "claim_ms": {
+        "p50": 1.68,
+        "p95": 2.58
+      },
+      "db_cpu_cores": 0.47,
+      "client_cpu_cores": 0.19,
+      "backends_by_state": {
+        "idle": 3.19,
+        "IO:WALSync": 0.88,
+        "LWLock:WALWrite": 0.43,
+        "CPU": 0.28,
+        "IO:WALWrite": 0.02,
+        "Client:ClientRead": 0,
+        "IO:DataFileExtend": 0,
+        "Lock:transactionid": 0
+      },
+      "wal": {
+        "records": 2903527,
+        "bytes": 281026026,
+        "writes": 315027,
+        "syncs": 309306,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 7002,
+          "mean_ms": 0.07,
+          "io_ms": 28
+        },
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 10002,
+          "total_ms": 4902,
+          "mean_ms": 0.49,
+          "io_ms": 18
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 2952,
+          "mean_ms": 0.03,
+          "io_ms": 51
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 1916,
+          "mean_ms": 0.019,
+          "io_ms": 45
+        },
+        {
+          "query": "UPDATE jobs j SET lease_expires_at = now() + make_interval(secs => $3::float8 / $4) F",
+          "calls": 33,
+          "total_ms": 80,
+          "mean_ms": 2.438,
+          "io_ms": 0
+        },
+        {
+          "query": "SELECT status, count(*)::int AS n FROM jobs GROUP BY status",
+          "calls": 1,
+          "total_ms": 12,
+          "mean_ms": 11.617,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    },
+    {
+      "workers": 4,
+      "batch": 10,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 93.88,
+      "throughput": 1065,
+      "exec_ms": {
+        "p50": 3.34,
+        "p95": 4.87,
+        "p99": 6.35
+      },
+      "claim_ms": {
+        "p50": 2.07,
+        "p95": 2.98
+      },
+      "db_cpu_cores": 0.88,
+      "client_cpu_cores": 0.28,
+      "backends_by_state": {
+        "idle": 5.17,
+        "LWLock:WALWrite": 1.79,
+        "IO:WALSync": 0.95,
+        "CPU": 0.58,
+        "Client:ClientRead": 0.02,
+        "IO:WALWrite": 0.01,
+        "LWLock:BufferContent": 0.01,
+        "LWLock:WALInsert": 0
+      },
+      "wal": {
+        "records": 2372363,
+        "bytes": 223510226,
+        "writes": 158658,
+        "syncs": 158617,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 7813,
+          "mean_ms": 0.078,
+          "io_ms": 41
+        },
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 10004,
+          "total_ms": 6008,
+          "mean_ms": 0.601,
+          "io_ms": 30
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 3180,
+          "mean_ms": 0.032,
+          "io_ms": 65
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 1979,
+          "mean_ms": 0.02,
+          "io_ms": 50
+        },
+        {
+          "query": "UPDATE jobs j SET lease_expires_at = now() + make_interval(secs => $3::float8 / $4) F",
+          "calls": 36,
+          "total_ms": 90,
+          "mean_ms": 2.499,
+          "io_ms": 0
+        },
+        {
+          "query": "SELECT status, count(*)::int AS n FROM jobs GROUP BY status",
+          "calls": 1,
+          "total_ms": 15,
+          "mean_ms": 15.461,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    },
+    {
+      "workers": 8,
+      "batch": 10,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 69.92,
+      "throughput": 1430,
+      "exec_ms": {
+        "p50": 4.97,
+        "p95": 7.41,
+        "p99": 9.14
+      },
+      "claim_ms": {
+        "p50": 3.07,
+        "p95": 4.24
+      },
+      "db_cpu_cores": 1.65,
+      "client_cpu_cores": 0.44,
+      "backends_by_state": {
+        "idle": 8.13,
+        "LWLock:WALWrite": 4.42,
+        "CPU": 1.05,
+        "IO:WALSync": 0.94,
+        "Client:ClientRead": 0.06,
+        "IO:WALWrite": 0.02,
+        "LWLock:BufferContent": 0.01,
+        "LWLock:WALInsert": 0,
+        "IO:DataFileExtend": 0
+      },
+      "wal": {
+        "records": 2381954,
+        "bytes": 223341768,
+        "writes": 84554,
+        "syncs": 84512,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 10684,
+          "mean_ms": 0.107,
+          "io_ms": 61
+        },
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 10008,
+          "total_ms": 8610,
+          "mean_ms": 0.86,
+          "io_ms": 46
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 4594,
+          "mean_ms": 0.046,
+          "io_ms": 85
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 2833,
+          "mean_ms": 0.028,
+          "io_ms": 70
+        },
+        {
+          "query": "UPDATE jobs j SET lease_expires_at = now() + make_interval(secs => $3::float8 / $4) F",
+          "calls": 43,
+          "total_ms": 87,
+          "mean_ms": 2.02,
+          "io_ms": 0
+        },
+        {
+          "query": "SELECT status, count(*)::int AS n FROM jobs GROUP BY status",
+          "calls": 1,
+          "total_ms": 18,
+          "mean_ms": 18.483,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    },
+    {
+      "workers": 16,
+      "batch": 10,
+      "rep": 1,
+      "jobs": 100000,
+      "seconds": 49.8,
+      "throughput": 2008,
+      "exec_ms": {
+        "p50": 7.28,
+        "p95": 9.72,
+        "p99": 12.29
+      },
+      "claim_ms": {
+        "p50": 3.98,
+        "p95": 5.55
+      },
+      "db_cpu_cores": 2.8,
+      "client_cpu_cores": 0.67,
+      "backends_by_state": {
+        "idle": 15.96,
+        "LWLock:WALWrite": 9.93,
+        "CPU": 1.64,
+        "IO:WALSync": 0.95,
+        "Client:ClientRead": 0.15,
+        "LWLock:BufferContent": 0.02,
+        "Timeout:SpinDelay": 0.01,
+        "IO:WALWrite": 0.01,
+        "IO:DataFileExtend": 0.01,
+        "LWLock:WALInsert": 0,
+        "LWLock:XidGen": 0
+      },
+      "wal": {
+        "records": 2884193,
+        "bytes": 281669001,
+        "writes": 53810,
+        "syncs": 48790,
+        "write_ms": 0,
+        "sync_ms": 0
+      },
+      "top_statements": [
+        {
+          "query": "UPDATE jobs SET status = $3, finished_at = now(), lease_expires_at = $4, last_error = $5 ",
+          "calls": 100000,
+          "total_ms": 13199,
+          "mean_ms": 0.132,
+          "io_ms": 90
+        },
+        {
+          "query": "WITH next AS ( SELECT id FROM jobs WHERE queue = $1 AND status = $5 AND run_at <= now(",
+          "calls": 10016,
+          "total_ms": 11042,
+          "mean_ms": 1.102,
+          "io_ms": 65
+        },
+        {
+          "query": "INSERT INTO reports (job_id, report_key, payload) VALUES ($1, $2, $3) ON CONFLICT (",
+          "calls": 100000,
+          "total_ms": 5666,
+          "mean_ms": 0.057,
+          "io_ms": 118
+        },
+        {
+          "query": "INSERT INTO job_runs (job_id, worker_id, attempt, lease_token) VALUES ($1, $2, $3, $4)",
+          "calls": 100000,
+          "total_ms": 3435,
+          "mean_ms": 0.034,
+          "io_ms": 80
+        },
+        {
+          "query": "UPDATE jobs j SET lease_expires_at = now() + make_interval(secs => $3::float8 / $4) F",
+          "calls": 63,
+          "total_ms": 66,
+          "mean_ms": 1.048,
+          "io_ms": 1
+        },
+        {
+          "query": "SELECT count(*) AS runs, count(DISTINCT job_id) AS d FROM job_runs",
+          "calls": 1,
+          "total_ms": 22,
+          "mean_ms": 21.545,
+          "io_ms": 0
+        }
+      ],
+      "duplicates": 0,
+      "statuses": {
+        "succeeded": 100000
+      }
+    }
+  ]
+}

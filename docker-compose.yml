@@ -1,0 +1,66 @@
+name: taskrelay
+
+x-app: &app
+  build: .
+  image: taskrelay:local
+  environment: &app-env
+    DATABASE_URL: postgres://taskrelay:taskrelay@postgres:5432/taskrelay
+    TASKRELAY_IN_DOCKER: "1"
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: taskrelay
+      POSTGRES_PASSWORD: taskrelay
+      POSTGRES_DB: taskrelay
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - max_connections=200
+      - -c
+      - track_io_timing=on
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/initdb.sql:/docker-entrypoint-initdb.d/initdb.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskrelay -d taskrelay"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    <<: *app
+    command: ["node", "dist/src/main.js", "api"]
+    ports:
+      - "3000:3000"
+
+  worker:
+    <<: *app
+    command: ["node", "dist/src/main.js", "worker"]
+    stop_grace_period: 40s
+    environment:
+      <<: *app-env
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+      LEASE_MS: ${LEASE_MS:-30000}
+      REAPER_INTERVAL_MS: ${REAPER_INTERVAL_MS:-5000}
+      TASKRELAY_FAULTS: ${TASKRELAY_FAULTS:-}
+
+  # One-off experiment runner: `docker compose run --rm bench node dist/bench/<script>.js`
+  bench:
+    <<: *app
+    profiles: ["bench"]
+    volumes:
+      - ./bench/results:/app/bench/results
+
+volumes:
+  pgdata:

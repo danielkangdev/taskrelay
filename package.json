@@ -1,0 +1,45 @@
+{
+  "name": "taskrelay",
+  "version": "0.1.0",
+  "description": "A PostgreSQL-backed background job system with provable correctness: SKIP LOCKED claiming, leases, fencing tokens, idempotent writes.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "db:up": "docker compose up -d postgres",
+    "migrate": "tsx src/main.ts migrate",
+    "seed": "tsx src/main.ts seed",
+    "api": "tsx src/main.ts api",
+    "worker": "tsx src/main.ts worker",
+    "demo": "tsx scripts/demo.ts",
+    "bench:e1": "docker compose run --rm bench node dist/bench/e1-throughput.js",
+    "bench:e2": "docker compose run --rm bench node dist/bench/e2-claim-strategies.js",
+    "bench:e3": "docker compose run --rm bench node dist/bench/e3-wakeup.js",
+    "bench:e4": "tsx bench/e4-chaos.ts",
+    "bench:report": "tsx bench/report.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.12.8",
+    "pg": "^8.23.1",
+    "prom-client": "^15.1.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.1.0"
+  }
+}
